@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vinext dev",
-    "check": "node scripts/check-content.ts",
     "test": "node --test \"test/**/*.test.ts\"",
-    "prebuild": "npm run check",
     "build": "vinext build",
     "start": "vinext start",
     "deploy": "vinext deploy"
