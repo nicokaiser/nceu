@@ -399,11 +399,11 @@ const footerLinks: { title: string; href: string; icon: IconName }[] = [
 ];
 
 const navLinks: { title: string; href: string; icon: IconName }[] = [
-  { title: "Program", href: "/program", icon: "calendar" },
-  { title: "Speakers", href: "/speakers", icon: "speakers" },
-  { title: "Experience", href: "/#experience", icon: "spark" },
-  { title: "Photos", href: "/photos", icon: "camera" },
-  { title: "Partners", href: "/#partners", icon: "network" },
+  { title: "Program", href: "https://nodeconf.eu/program", icon: "calendar" },
+  { title: "Speakers", href: "https://nodeconf.eu/speakers", icon: "speakers" },
+  { title: "Experience", href: "https://nodeconf.eu/#experience", icon: "spark" },
+  { title: "Photos", href: "/", icon: "camera" },
+  { title: "Partners", href: "https://nodeconf.eu/#partners", icon: "network" },
 ];
 
 /**
@@ -448,15 +448,15 @@ export function SiteFooter() {
         </address>
       </div>
       <div className="footer-links">
-        <a className="footer-link" href="/program">
+        <a className="footer-link" href="https://nodeconf.eu/program">
           <LinkIcon name="calendar" />
           <span>Program</span>
         </a>
-        <a className="footer-link" href="/speakers">
+        <a className="footer-link" href="https://nodeconf.eu/speakers">
           <LinkIcon name="speakers" />
           <span>Speakers</span>
         </a>
-        <a className="footer-link" href="/code-of-conduct">
+        <a className="footer-link" href="https://nodeconf.eu/code-of-conduct">
           <span>Code of Conduct</span>
         </a>
         {footerLinks.map((link) => (
