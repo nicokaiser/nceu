@@ -1,23 +1,37 @@
 #!/usr/bin/env node
 // Prints the program as Markdown photo captions, one heading per day.
 //
-//   node scripts/program-captions.js [url] > captions.md
+//   node scripts/program-captions.js > captions.md
 //
-// Only needs `fetch` (Node 18+). Defaults to the live site; pass another
-// program.json URL (e.g. http://localhost:5173/program.json) to override.
+// Reads content/program.yaml and the speaker names from content/speakers/*.md.
+// Each caption is followed by a Bluesky version that uses the speakers'
+// @handles (falling back to their names), e.g. "📸 #NodeConfEU @bengl.dev: Title".
 
-const url = process.argv[2] ?? "https://nodeconf.eu/program.json";
+import { readdirSync, readFileSync } from "node:fs";
+import { parse as parseYaml } from "yaml";
+
+const CONTENT = new URL("../content/", import.meta.url);
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
 const SUFFIX = "at NodeConf EU 2026, Bologna, Italy.";
+const BLUESKY_PREFIX = "📸 #NodeConfEU";
 // Organiser-led sessions are captioned by title only.
 const HIDDEN_SPEAKERS = new Set(["NodeConf EU Staff"]);
 
-const res = await fetch(url);
-if (!res.ok) {
-  console.error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-  process.exit(1);
-}
-const program = await res.json();
-const names = program.speakerNames ?? {};
+const program = parseYaml(readFileSync(new URL("program.yaml", CONTENT), "utf8"));
+const speakerDir = new URL("speakers/", CONTENT);
+// Speaker id → { name, handle }, where handle is the Bluesky handle (if any).
+const speakers = Object.fromEntries(
+  readdirSync(speakerDir)
+    .filter((f) => f.endsWith(".md") && !f.startsWith("_"))
+    .map((f) => {
+      const match = readFileSync(new URL(f, speakerDir), "utf8").match(FRONTMATTER);
+      const data = match ? parseYaml(match[1]) : undefined;
+      const bluesky = data?.links?.bluesky;
+      const handle = bluesky?.match(/bsky\.app\/profile\/([^/?#]+)/)?.[1];
+      return [f.replace(/\.md$/, ""), { name: data?.name, handle }];
+    })
+    .filter(([, speaker]) => speaker.name),
+);
 
 function formatDate(date) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -29,16 +43,22 @@ function formatDate(date) {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
-function presenters(session) {
-  const lead = names[session.speakerId] ?? session.speaker;
-  const co = (session.coSpeakerIds ?? []).map((id) => names[id] ?? id);
+function presenters(session, useHandles) {
+  const lead = speakers[session.speakerId] ?? { name: session.speaker };
+  const co = (session.coSpeakerIds ?? []).map((id) => speakers[id] ?? { name: id });
   return [lead, ...co]
-    .filter((name) => name && !HIDDEN_SPEAKERS.has(name))
+    .filter(({ name }) => name && !HIDDEN_SPEAKERS.has(name))
+    .map(({ name, handle }) => (useHandles && handle ? `@${handle}` : name))
     .join(" & ");
 }
 
-function caption(session) {
-  const who = presenters(session);
+function caption(session, bluesky = false) {
+  const who = presenters(session, bluesky);
+  if (bluesky) {
+    return who
+      ? `${BLUESKY_PREFIX} ${who}: ${session.title}`
+      : `${BLUESKY_PREFIX} ${session.title}`;
+  }
   return who
     ? `${who} presenting “${session.title}” ${SUFFIX}`
     : `${session.title} ${SUFFIX}`;
@@ -50,7 +70,7 @@ for (const day of program.days) {
 
   out.push(`## ${day.label} — ${formatDate(day.date)}`, "");
   for (const session of day.sessions) {
-    out.push(caption(session), "");
+    out.push(caption(session), caption(session, true), "");
   }
 }
 
